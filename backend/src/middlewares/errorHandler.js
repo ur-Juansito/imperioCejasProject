@@ -1,6 +1,14 @@
 const logger = require('../utils/logger');
 const response = require('../utils/response');
 
+// Middleware para rutas no encontradas (404)
+const notFound = (req, res, next) => {
+    const error = new Error(`Ruta no encontrada - ${req.originalUrl}`);
+    res.status(404);
+    next(error);
+};
+
+// Middleware general de manejo de errores
 const errorHandler = (err, req, res, next) => {
     // Usamos el utilitario de logs
     logger.error('Error no controlado capturado por el middleware', err);
@@ -12,4 +20,7 @@ const errorHandler = (err, req, res, next) => {
     return response.error(res, message, statusCode, err.message);
 };
 
-module.exports = { errorHandler };
+module.exports = {
+    notFound,
+    errorHandler
+};
