@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
-const { notFound, errorHandler } = require('./middlewares/errorHandler');
+const { notFound, errorHandler } = require('./src/middlewares/errorHandler');
 
 const app = express();
 
@@ -14,10 +14,10 @@ app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
 
-const authRoutes = require('./routes/authRoutes');
-const serviceRoutes = require('./routes/serviceRoutes');
-const appointmentRoutes = require('./routes/appointmentRoutes');
-const professionalRoutes = require('./routes/professionalRoutes');
+const authRoutes = require('./src/routes/authRoutes');
+const serviceRoutes = require('./src/routes/serviceRoutes');
+const appointmentRoutes = require('./src/routes/appointmentRoutes');
+const professionalRoutes = require('./src/routes/professionalRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', serviceRoutes);

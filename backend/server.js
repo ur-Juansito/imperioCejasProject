@@ -1,6 +1,6 @@
 require('dotenv').config();
 const http = require('http'); 
-const app = require('./app');
+const app = require('../app');
 const pool = require('./config/db'); // El pool con mysql2/promise
 
 const PORT = process.env.PORT || 4000;
