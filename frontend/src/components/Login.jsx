@@ -1,27 +1,43 @@
 import React, { useState } from 'react';
 import api from '../services/api';
+
 export default function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
     try {
-      const res = await api.post('/auth/login', { email, password });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      onLoginSuccess(res.data.user);
-    } catch (err) { setError('Credenciales inválidas'); }
+      const response = await api.post('/auth/login', { email, password });
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      onLoginSuccess(response.data.user);
+    } catch (err) {
+      setError(err.response?.data?.message || 'No fue posible iniciar sesión. Verifica tus datos.');
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
-    <div style={{ maxWidth: '400px', margin: '4rem auto', padding: '2.5rem', background: '#141414', border: '1px solid #c5a059', borderRadius: '12px' }}>
-      <h2 style={{ color: '#d4af37', textAlign: 'center' }}>Iniciar Sesión</h2>
-      {error && <p style={{ color: '#d9534f', textAlign: 'center' }}>{error}</p>}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-        <input type="email" placeholder="Correo" value={email} onChange={e=>setEmail(e.target.value)} required style={{ padding: '12px', background: '#0f0f0f', border: '1px solid #333', color: '#fff', borderRadius: '6px' }} />
-        <input type="password" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} required style={{ padding: '12px', background: '#0f0f0f', border: '1px solid #333', color: '#fff', borderRadius: '6px' }} />
-        <button type="submit" className="btn-gold" style={{ padding: '12px' }}>Entrar</button>
+    <section className="auth-card">
+      <p className="eyebrow">ÉCLAT STUDIO</p>
+      <h2>Bienvenida</h2>
+      <p className="muted">Inicia sesión para gestionar tus citas.</p>
+      {error && <p className="alert error">{error}</p>}
+      <form onSubmit={handleSubmit} className="form-stack">
+        <label>Correo electrónico
+          <input type="email" autoComplete="email" placeholder="correo@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required />
+        </label>
+        <label>Contraseña
+          <input type="password" autoComplete="current-password" placeholder="Tu contraseña" value={password} onChange={e => setPassword(e.target.value)} required />
+        </label>
+        <button className="btn-primary" type="submit" disabled={loading}>{loading ? 'Ingresando…' : 'Iniciar sesión'}</button>
       </form>
-    </div>
+    </section>
   );
 }

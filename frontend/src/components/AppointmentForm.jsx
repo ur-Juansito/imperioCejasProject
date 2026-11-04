@@ -1,46 +1,110 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+
+const today = () => {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
 export default function AppointmentForm({ onCreated }) {
   const [services, setServices] = useState([]);
-  const [profesionales, setProfesionales] = useState([]);
-  const [servicioId, setServicioId] = useState('');
-  const [profesionalId, setProfesionalId] = useState('');
-  const [fecha, setFecha] = useState('');
-  const [hora, setHora] = useState('');
-  const [msg, setMsg] = useState('');
+  const [professionals, setProfessionals] = useState([]);
+  const [serviceId, setServiceId] = useState('');
+  const [professionalId, setProfessionalId] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [slots, setSlots] = useState([]);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get('/services').then(res => setServices(res.data.data));
-    api.get('/professionals').then(res => setProfesionales(res.data.data));
+    Promise.all([api.get('/services'), api.get('/professionals')])
+      .then(([serviceResponse, professionalResponse]) => {
+        setServices(serviceResponse.data.data || []);
+        setProfessionals(professionalResponse.data.data || []);
+      })
+      .catch(() => setError('No se pudo cargar el catálogo. Intenta nuevamente.'));
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    setTime('');
+    setSlots([]);
+    setMessage('');
+    if (!serviceId || !professionalId || !date) return;
+    api.get('/appointments/availability', {
+      params: { servicio_id: serviceId, profesional_id: professionalId, fecha: date }
+    }).then(response => {
+      setSlots(response.data.data?.slots || []);
+      if (!(response.data.data?.slots || []).length) {
+        setMessage(response.data.data?.message || 'No hay horarios disponibles para esta fecha.');
+      }
+    }).catch(err => {
+      setError(err.response?.data?.message || 'No se pudieron consultar los horarios.');
+    });
+  }, [serviceId, professionalId, date]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    setLoading(true);
     try {
-      await api.post('/appointments', { servicio_id: servicioId, profesional_id: profesionalId, fecha, hora });
-      setMsg('¡Cita agendada con éxito!');
-      setServicioId(''); setProfesionalId(''); setFecha(''); setHora('');
-      if(onCreated) onCreated();
-    } catch(err) { setMsg('Error al agendar cita'); }
+      await api.post('/appointments', {
+        servicio_id: Number(serviceId),
+        profesional_id: Number(professionalId),
+        fecha: date,
+        hora: time
+      });
+      setMessage('¡Solicitud enviada! Tu cita quedó pendiente de aprobación profesional.');
+      setServiceId('');
+      setProfessionalId('');
+      setDate('');
+      setTime('');
+      setSlots([]);
+      if (onCreated) onCreated();
+    } catch (err) {
+      setError(err.response?.data?.message || 'No fue posible enviar la solicitud.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ maxWidth: '550px', margin: '2rem auto', padding: '2.5rem', background: '#141414', border: '1px solid #c5a059', borderRadius: '12px' }}>
-      <h2 style={{ color: '#d4af37', textAlign: 'center' }}>Agendar Cita</h2>
-      {msg && <p style={{ textAlign: 'center', color: '#5cb85c' }}>{msg}</p>}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-        <select value={servicioId} onChange={e=>setServicioId(e.target.value)} required style={{ padding: '12px', background: '#0f0f0f', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}>
-          <option value="">Seleccione servicio</option>
-          {services.map(s => <option key={s.id} value={s.id}>{s.nombre} (${s.precio})</option>)}
-        </select>
-        <select value={profesionalId} onChange={e=>setProfesionalId(e.target.value)} required style={{ padding: '12px', background: '#0f0f0f', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}>
-          <option value="">Seleccione profesional</option>
-          {profesionales.map(p => <option key={p.id} value={p.id}>{p.nombre_completo} - {p.especialidad}</option>)}
-        </select>
-        <input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} required style={{ padding: '12px', background: '#0f0f0f', border: '1px solid #333', color: '#fff', borderRadius: '6px' }} />
-        <input type="time" value={hora} onChange={e=>setHora(e.target.value)} required style={{ padding: '12px', background: '#0f0f0f', border: '1px solid #333', color: '#fff', borderRadius: '6px' }} />
-        <button type="submit" className="btn-gold" style={{ padding: '12px' }}>Confirmar</button>
+    <section className="panel form-panel">
+      <div className="section-heading">
+        <p className="eyebrow">RESERVAS</p>
+        <h2>Solicitar una cita</h2>
+        <p className="muted">Elige el tratamiento y un horario. El profesional confirmará tu solicitud.</p>
+      </div>
+      {message && <p className="alert success">{message}</p>}
+      {error && <p className="alert error">{error}</p>}
+      <form onSubmit={handleSubmit} className="form-stack">
+        <label>Servicio
+          <select value={serviceId} onChange={e => setServiceId(e.target.value)} required>
+            <option value="">Selecciona un servicio</option>
+            {services.map(service => <option key={service.id} value={service.id}>{service.nombre} · ${Number(service.precio).toLocaleString('es-CO')}</option>)}
+          </select>
+        </label>
+        <label>Profesional
+          <select value={professionalId} onChange={e => setProfessionalId(e.target.value)} required>
+            <option value="">Selecciona un profesional</option>
+            {professionals.map(person => <option key={person.id} value={person.id}>{person.nombre_completo}{person.especialidad ? ` · ${person.especialidad}` : ''}</option>)}
+          </select>
+        </label>
+        <label>Fecha
+          <input type="date" min={today()} value={date} onChange={e => setDate(e.target.value)} required />
+        </label>
+        <label>Horario disponible
+          <select value={time} onChange={e => setTime(e.target.value)} required disabled={!slots.length}>
+            <option value="">{slots.length ? 'Selecciona un horario' : 'Primero selecciona servicio, profesional y fecha'}</option>
+            {slots.map(slot => <option key={slot} value={slot}>{slot}</option>)}
+          </select>
+        </label>
+        <button className="btn-primary" type="submit" disabled={loading || !time}>{loading ? 'Enviando…' : 'Enviar solicitud de cita'}</button>
       </form>
-    </div>
+      <p className="hint">Tu reserva no estará confirmada hasta que el profesional la apruebe.</p>
+    </section>
   );
 }
