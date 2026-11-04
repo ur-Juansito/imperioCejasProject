@@ -37,7 +37,7 @@ export default function App() {
       </header>
       <main className="content">
         <div className="welcome">
-          <p className="eyebrow">ÉCLAT STUDIO · BELLEZA Y CUIDADO</p>
+          <p className="eyebrow">IMPERIO DE LAS CEJAS · BELLEZA Y CUIDADO</p>
           <h1>{title}</h1>
           <p className="muted">{canRequest ? 'Solicita tu tratamiento y espera la aprobación de nuestro equipo.' : 'Gestiona las solicitudes y el estado de las citas.'}</p>
         </div>
