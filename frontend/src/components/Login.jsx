@@ -25,7 +25,7 @@ export default function Login({ onLoginSuccess }) {
 
   return (
     <section className="auth-card">
-      <p className="eyebrow">ÉCLAT STUDIO</p>
+      <p className="eyebrow">IMPERIO DE LAS CEJAS</p>
       <h2>Bienvenida</h2>
       <p className="muted">Inicia sesión para gestionar tus citas.</p>
       {error && <p className="alert error">{error}</p>}
