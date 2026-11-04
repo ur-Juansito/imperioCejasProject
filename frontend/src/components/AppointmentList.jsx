@@ -1,36 +1,90 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-export default function AppointmentList() {
-  const [citas, setCitas] = useState([]);
-  const fetchCitas = () => api.get('/appointments').then(res => setCitas(res.data.data));
-  useEffect(() => { fetchCitas(); }, []);
-  const handleDelete = async (id) => {
-    if(window.confirm('¿Cancelar cita?')) {
-      await api.delete(`/appointments/${id}`);
-      fetchCitas();
+
+const statusLabel = {
+  PENDIENTE: 'Pendiente de aprobación',
+  CONFIRMADA: 'Confirmada',
+  CANCELADA: 'Cancelada / rechazada',
+  COMPLETADA: 'Atendida'
+};
+
+export default function AppointmentList({ user }) {
+  const [appointments, setAppointments] = useState([]);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState(null);
+
+  const fetchAppointments = useCallback(async () => {
+    try {
+      const response = await api.get('/appointments');
+      setAppointments(response.data.data || []);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudieron cargar las citas.');
+    }
+  }, []);
+
+  useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
+
+  const updateStatus = async (id, action) => {
+    setBusyId(id);
+    setError('');
+    try {
+      await api.patch(`/appointments/${id}/${action}`);
+      await fetchAppointments();
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo actualizar la cita.');
+    } finally {
+      setBusyId(null);
     }
   };
+
+  const canApprove = ['ADMIN', 'PROFESIONAL'].includes(user?.rol);
+  const isClient = user?.rol === 'CLIENTE';
+
   return (
-    <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '2rem', background: '#141414', border: '1px solid #c5a059', borderRadius: '12px' }}>
-      <h2 style={{ color: '#d4af37', textAlign: 'center' }}>Citas Programadas</h2>
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-        <thead>
-          <tr style={{ color: '#d4af37', borderBottom: '1px solid #333', textAlign: 'left' }}>
-            <th style={{padding: '10px'}}>Cliente</th><th style={{padding: '10px'}}>Servicio</th><th style={{padding: '10px'}}>Profesional</th><th style={{padding: '10px'}}>Fecha/Hora</th><th style={{padding: '10px'}}>Acción</th>
-          </tr>
-        </thead>
-        <tbody>
-          {citas.map(c => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #222' }}>
-              <td style={{padding: '10px'}}>{c.cliente_email}</td>
-              <td style={{padding: '10px'}}>{c.servicio_nombre}</td>
-              <td style={{padding: '10px'}}>{c.profesional_nombre}</td>
-              <td style={{padding: '10px'}}>{c.fecha?.split('T')[0]} {c.hora}</td>
-              <td style={{padding: '10px'}}><button onClick={()=>handleDelete(c.id)} style={{background:'#d9534f', color:'#fff', border:'none', padding:'6px 12px', borderRadius:'4px'}}>Eliminar</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <section className="panel">
+      <div className="section-heading">
+        <p className="eyebrow">AGENDA</p>
+        <h2>{canApprove ? 'Solicitudes y citas' : 'Mis citas'}</h2>
+        <p className="muted">{canApprove ? 'Revisa las solicitudes pendientes y decide si las apruebas.' : 'Consulta el estado de tus solicitudes de reserva.'}</p>
+      </div>
+      {error && <p className="alert error">{error}</p>}
+      {!appointments.length ? <p className="empty-state">Todavía no hay citas para mostrar.</p> : (
+        <div className="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Cliente</th><th>Servicio</th><th>Profesional</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody>
+              {appointments.map(item => (
+                <tr key={item.id}>
+                  <td>{item.cliente_email}</td>
+                  <td>{item.servicio_nombre}</td>
+                  <td>{item.profesional_nombre}</td>
+                  <td>{String(item.fecha).slice(0, 10)}</td>
+                  <td>{String(item.hora).slice(0, 5)}</td>
+                  <td><span className={`status status-${item.estado.toLowerCase()}`}>{statusLabel[item.estado] || item.estado}</span></td>
+                  <td>
+                    <div className="actions">
+                      {canApprove && item.estado === 'PENDIENTE' && <>
+                        <button className="btn-small approve" disabled={busyId === item.id} onClick={() => updateStatus(item.id, 'confirmar')}>Aprobar</button>
+                        <button className="btn-small reject" disabled={busyId === item.id} onClick={() => updateStatus(item.id, 'rechazar')}>Rechazar</button>
+                      </>}
+                      {canApprove && item.estado === 'CONFIRMADA' && (
+                        <button className="btn-small approve" disabled={busyId === item.id} onClick={() => updateStatus(item.id, 'atendida')}>Marcar atendida</button>
+                      )}
+                      {(isClient && ['PENDIENTE', 'CONFIRMADA'].includes(item.estado)) && (
+                        <button className="btn-small reject" disabled={busyId === item.id} onClick={() => updateStatus(item.id, 'cancelar')}>Cancelar</button>
+                      )}
+                      {!((canApprove && ['PENDIENTE', 'CONFIRMADA'].includes(item.estado)) || (isClient && ['PENDIENTE', 'CONFIRMADA'].includes(item.estado))) && <span className="muted">—</span>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

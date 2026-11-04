@@ -1,13 +1,10 @@
 const jwt = require('jsonwebtoken');
 
 exports.generateToken = (payload, expiresIn = process.env.JWT_EXPIRES_IN || '8h') => {
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET debe configurarse con al menos 32 caracteres.');
+  }
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
 };
 
-exports.verifyToken = (token) => {
-    try {
-        return jwt.verify(token, process.env.JWT_SECRET);
-    } catch (error) {
-        throw new Error('Token inválido o expirado');
-    }
-};
+exports.verifyToken = (token) => jwt.verify(token, process.env.JWT_SECRET);

@@ -4,31 +4,52 @@ import AppointmentForm from './components/AppointmentForm';
 import AppointmentList from './components/AppointmentList';
 
 export default function App() {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('user') || 'null'); }
+    catch { return null; }
+  });
   const [view, setView] = useState('form');
 
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
+
   if (!user) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#0b0b0b' }}>
-        <h1 style={{ color: '#d4af37', fontFamily: 'Georgia' }}>El Imperio de las Cejas</h1>
-        <Login onLoginSuccess={setUser} />
-      </div>
-    );
+    return <main className="auth-page"><Login onLoginSuccess={setUser} /></main>;
   }
 
+  const canRequest = user.rol === 'CLIENTE';
+  const title = user.rol === 'PROFESIONAL' ? 'Panel profesional' : user.rol === 'ADMIN' ? 'Administración' : 'Tu espacio de belleza';
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0b0b0b', color: '#fff' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 3rem', borderBottom: '1px solid #333', background: '#121212' }}>
-        <h1 style={{ color: '#d4af37', margin: 0, fontSize: '1.5rem' }}>El Imperio de las Cejas</h1>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button onClick={() => setView('form')} className="btn-gold" style={{ padding: '8px 16px' }}>Agendar Cita</button>
-          <button onClick={() => setView('list')} className="btn-gold" style={{ padding: '8px 16px' }}>Ver Citas</button>
-          <button onClick={() => { localStorage.clear(); setUser(null); }} style={{ background: 'transparent', border: '1px solid #d9534f', color: '#d9534f', padding: '8px 16px', borderRadius: '6px' }}>Salir</button>
+    <div className="app-shell">
+      <header className="topbar">
+        <a className="brand" href="/" aria-label="Éclat Studio inicio">
+          <span className="brand-mark">É</span>
+          <span><strong>ÉCLAT</strong><small>STUDIO</small></span>
+        </a>
+        <div className="topbar-user">
+          <div><strong>{user.email}</strong><small>{title}</small></div>
+          <button className="btn-outline" onClick={logout}>Cerrar sesión</button>
         </div>
       </header>
-      <main style={{ padding: '2rem' }}>
-        {view === 'form' ? <AppointmentForm /> : <AppointmentList />}
+      <main className="content">
+        <div className="welcome">
+          <p className="eyebrow">ÉCLAT STUDIO · BELLEZA Y CUIDADO</p>
+          <h1>{title}</h1>
+          <p className="muted">{canRequest ? 'Solicita tu tratamiento y espera la aprobación de nuestro equipo.' : 'Gestiona las solicitudes y el estado de las citas.'}</p>
+        </div>
+        <nav className="tabs">
+          {canRequest && <button className={view === 'form' ? 'tab active' : 'tab'} onClick={() => setView('form')}>Solicitar cita</button>}
+          <button className={view === 'list' ? 'tab active' : 'tab'} onClick={() => setView('list')}>{canRequest ? 'Mis citas' : 'Gestionar agenda'}</button>
+        </nav>
+        {view === 'form' && canRequest
+          ? <AppointmentForm onCreated={() => setView('list')} />
+          : <AppointmentList user={user} />}
       </main>
+      <footer className="footer">Éclat Studio · Tu belleza, nuestra dedicación.</footer>
     </div>
   );
 }
