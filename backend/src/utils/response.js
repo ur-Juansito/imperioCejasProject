@@ -3,7 +3,7 @@ exports.success = (res, message, data = null, statusCode = 200) => {
         success: true,
         message
     };
-    
+
     if (data !== null) {
         response.data = data;
     }
@@ -14,7 +14,8 @@ exports.success = (res, message, data = null, statusCode = 200) => {
 exports.error = (res, message, statusCode = 500, details = null) => {
     const response = {
         success: false,
-        error: message
+        message,        // el frontend lee `message`
+        error: message  // se conserva `error` por compatibilidad
     };
 
     // Solo enviamos los detalles del error en entorno de desarrollo

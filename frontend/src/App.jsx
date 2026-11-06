@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Login from './components/Login';
+import Register from './components/Register';
 import AppointmentForm from './components/AppointmentForm';
 import AppointmentList from './components/AppointmentList';
 
@@ -9,6 +10,7 @@ export default function App() {
     catch { return null; }
   });
   const [view, setView] = useState('form');
+  const [authView, setAuthView] = useState('login'); // 'login' | 'register'
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -17,7 +19,13 @@ export default function App() {
   };
 
   if (!user) {
-    return <main className="auth-page"><Login onLoginSuccess={setUser} /></main>;
+    return (
+      <main className="auth-page">
+        {authView === 'login'
+          ? <Login onLoginSuccess={setUser} onGoRegister={() => setAuthView('register')} />
+          : <Register onRegisterSuccess={(newUser) => { setView('form'); setUser(newUser); }} onGoLogin={() => setAuthView('login')} />}
+      </main>
+    );
   }
 
   const canRequest = user.rol === 'CLIENTE';
@@ -31,7 +39,7 @@ export default function App() {
           <span><strong>ÉCLAT</strong><small>STUDIO</small></span>
         </a>
         <div className="topbar-user">
-          <div><strong>{user.email}</strong><small>{title}</small></div>
+          <div><strong>{user.nombre || user.email}</strong><small>{title}</small></div>
           <button className="btn-outline" onClick={logout}>Cerrar sesión</button>
         </div>
       </header>

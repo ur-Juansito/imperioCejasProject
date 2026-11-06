@@ -22,6 +22,8 @@ const bogotaToday = () => new Intl.DateTimeFormat('en-CA', {
 }).format(new Date());
 
 const weekdayNumber = (date) => ((date.getUTCDay() + 6) % 7) + 1; // lunes=1 ... domingo=7
+const WEEKDAY_NAMES = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+const weekdayName = (date) => WEEKDAY_NAMES[weekdayNumber(date) - 1];
 const timeToMinutes = (value) => {
   const match = String(value).match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
   return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
@@ -31,10 +33,22 @@ const minutesToTime = (minutes) =>
 
 const getProfessionalId = async (userId) => {
   const [rows] = await pool.query(
-    'SELECT id FROM Profesionales WHERE usuario_id = ? AND activo = TRUE LIMIT 1',
+    'SELECT id FROM Profesionales WHERE usuario_id = ? LIMIT 1',
     [userId]
   );
   return rows[0]?.id || null;
+};
+
+// Devuelve Clientes.id del usuario; si la cuenta es antigua y no tiene perfil, lo crea.
+const getOrCreateClientId = async (executor, user) => {
+  const [rows] = await executor.query('SELECT id FROM Clientes WHERE usuario_id = ? LIMIT 1', [user.id]);
+  if (rows.length) return rows[0].id;
+  const fallbackName = String(user.email || 'Cliente').split('@')[0];
+  const [result] = await executor.query(
+    'INSERT INTO Clientes (usuario_id, nombre_completo) VALUES (?, ?)',
+    [user.id, fallbackName]
+  );
+  return result.insertId;
 };
 
 const getAllAppointments = async (req, res, next) => {
@@ -44,8 +58,9 @@ const getAllAppointments = async (req, res, next) => {
     let params = [];
 
     if (role === 'CLIENTE') {
-      where = 'WHERE c.usuario_id = ?';
-      params = [req.user.id];
+      const clientId = await getOrCreateClientId(pool, req.user);
+      where = 'WHERE c.cliente_id = ?';
+      params = [clientId];
     } else if (role === 'PROFESIONAL') {
       const professionalId = await getProfessionalId(req.user.id);
       if (!professionalId) throw fail('Tu usuario no está vinculado a un perfil profesional. Contacta al administrador.', 403);
@@ -56,18 +71,21 @@ const getAllAppointments = async (req, res, next) => {
     }
 
     const [appointments] = await pool.query(`
-      SELECT c.id, c.usuario_id, c.servicio_id, c.profesional_id,
+      SELECT c.id, c.cliente_id, c.servicio_id, c.profesional_id,
              DATE_FORMAT(c.fecha, '%Y-%m-%d') AS fecha,
              TIME_FORMAT(c.hora, '%H:%i') AS hora,
-             c.estado, c.created_at,
+             c.estado,
              s.nombre AS servicio_nombre, s.precio AS servicio_precio,
              s.duracion_minutos,
              p.nombre_completo AS profesional_nombre,
+             cl.nombre_completo AS cliente_nombre,
+             cl.telefono AS cliente_telefono,
              u.email AS cliente_email
       FROM Citas c
       JOIN Servicios s ON s.id = c.servicio_id
       JOIN Profesionales p ON p.id = c.profesional_id
-      JOIN Usuarios u ON u.id = c.usuario_id
+      JOIN Clientes cl ON cl.id = c.cliente_id
+      JOIN Usuarios u ON u.id = cl.usuario_id
       ${where}
       ORDER BY c.fecha DESC, c.hora DESC
     `, params);
@@ -93,19 +111,20 @@ const getAvailability = async (req, res, next) => {
     const duration = Number(services[0].duracion_minutos || 30);
 
     const [professionals] = await pool.query(
-      'SELECT id FROM Profesionales WHERE id = ? AND activo = TRUE',
+      'SELECT id FROM Profesionales WHERE id = ?',
       [profesional_id]
     );
     if (!professionals.length) throw fail('El profesional no está disponible.', 404);
 
-    const day = weekdayNumber(date);
+    // dia_semana es ENUM('LUNES',...). Se compara también por número (1-7) para que funcione
+    // igual si la columna fuera numérica.
     const [schedules] = await pool.query(
       `SELECT TIME_FORMAT(hora_inicio, '%H:%i') AS hora_inicio,
               TIME_FORMAT(hora_fin, '%H:%i') AS hora_fin
        FROM Horarios
-       WHERE profesional_id = ? AND dia_semana = ? AND activo = TRUE
+       WHERE profesional_id = ? AND (dia_semana = ? OR dia_semana = ?)
        ORDER BY hora_inicio`,
-      [profesional_id, day]
+      [profesional_id, weekdayName(date), weekdayNumber(date)]
     );
     if (!schedules.length) {
       return res.json({ success: true, data: { slots: [], message: 'El profesional no tiene horarios configurados para ese día.' } });
@@ -165,7 +184,7 @@ const createAppointment = async (req, res, next) => {
 
     // Serializa las reservas para un mismo profesional y evita dos solicitudes simultáneas.
     const [professionalRows] = await connection.query(
-      'SELECT id FROM Profesionales WHERE id = ? AND activo = TRUE FOR UPDATE',
+      'SELECT id FROM Profesionales WHERE id = ? FOR UPDATE',
       [profesional_id]
     );
     if (!professionalRows.length) throw fail('El profesional no existe o está inactivo.', 404);
@@ -177,13 +196,12 @@ const createAppointment = async (req, res, next) => {
     if (!serviceRows.length) throw fail('El servicio seleccionado no existe.', 404);
     const duration = Number(serviceRows[0].duracion_minutos || 30);
 
-    const day = weekdayNumber(date);
     const [schedules] = await connection.query(
       `SELECT id FROM Horarios
-       WHERE profesional_id = ? AND dia_semana = ? AND activo = TRUE
+       WHERE profesional_id = ? AND (dia_semana = ? OR dia_semana = ?)
          AND hora_inicio <= ? AND hora_fin >= ADDTIME(?, SEC_TO_TIME(? * 60))
        LIMIT 1`,
-      [profesional_id, day, hora, hora, duration]
+      [profesional_id, weekdayName(date), weekdayNumber(date), hora, hora, duration]
     );
     if (!schedules.length) throw fail('Ese horario está fuera de la jornada del profesional.');
 
@@ -200,10 +218,11 @@ const createAppointment = async (req, res, next) => {
     );
     if (conflicts.length) throw fail('Ese horario acaba de ser ocupado. Selecciona otro.');
 
+    const clientId = await getOrCreateClientId(connection, req.user);
     const [result] = await connection.query(
-      `INSERT INTO Citas (usuario_id, servicio_id, profesional_id, fecha, hora, estado)
+      `INSERT INTO Citas (cliente_id, servicio_id, profesional_id, fecha, hora, estado)
        VALUES (?, ?, ?, ?, ?, 'PENDIENTE')`,
-      [req.user.id, servicio_id, profesional_id, fecha, hora]
+      [clientId, servicio_id, profesional_id, fecha, hora]
     );
 
     await connection.commit();
@@ -228,8 +247,11 @@ const changeAppointmentStatus = async (req, res, next) => {
     const { action } = req.params;
     const user = req.user;
     const [rows] = await pool.query(
-      `SELECT c.id, c.estado, c.usuario_id, c.profesional_id, p.usuario_id AS profesional_usuario_id
-       FROM Citas c JOIN Profesionales p ON p.id = c.profesional_id
+      `SELECT c.id, c.estado, c.cliente_id, cl.usuario_id AS cliente_usuario_id,
+              c.profesional_id, p.usuario_id AS profesional_usuario_id
+       FROM Citas c
+       JOIN Profesionales p ON p.id = c.profesional_id
+       JOIN Clientes cl ON cl.id = c.cliente_id
        WHERE c.id = ?`,
       [id]
     );
@@ -252,7 +274,7 @@ const changeAppointmentStatus = async (req, res, next) => {
       if (appointment.estado !== 'PENDIENTE') throw fail('Sólo se pueden rechazar citas pendientes.');
       nextState = 'CANCELADA';
     } else if (action === 'cancelar' || action === 'cancel') {
-      if (user.rol === 'CLIENTE' && Number(appointment.usuario_id) !== Number(user.id)) {
+      if (user.rol === 'CLIENTE' && Number(appointment.cliente_usuario_id) !== Number(user.id)) {
         throw fail('No puedes cancelar una cita que no te pertenece.', 403);
       }
       if (!['CLIENTE', 'PROFESIONAL', 'ADMIN'].includes(user.rol)) throw fail('No tienes permiso para cancelar citas.', 403);
@@ -267,7 +289,7 @@ const changeAppointmentStatus = async (req, res, next) => {
         throw fail('No puedes finalizar citas de otro profesional.', 403);
       }
       if (appointment.estado !== 'CONFIRMADA') throw fail('Sólo se pueden marcar como atendidas las citas confirmadas.');
-      nextState = 'COMPLETADA';
+      nextState = 'ATENDIDA';
     } else {
       throw fail('Acción de cita no válida.');
     }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../services/api';
+import api, { getErrorMessage } from '../services/api';
 
 const today = () => {
   const now = new Date();
@@ -25,7 +25,7 @@ export default function AppointmentForm({ onCreated }) {
         setServices(serviceResponse.data.data || []);
         setProfessionals(professionalResponse.data.data || []);
       })
-      .catch(() => setError('No se pudo cargar el catálogo. Intenta nuevamente.'));
+      .catch((err) => setError(getErrorMessage(err, 'No se pudo cargar el catálogo.')));
   }, []);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function AppointmentForm({ onCreated }) {
         setMessage(response.data.data?.message || 'No hay horarios disponibles para esta fecha.');
       }
     }).catch(err => {
-      setError(err.response?.data?.message || 'No se pudieron consultar los horarios.');
+      setError(getErrorMessage(err, 'No se pudieron consultar los horarios.'));
     });
   }, [serviceId, professionalId, date]);
 
@@ -65,7 +65,7 @@ export default function AppointmentForm({ onCreated }) {
       setSlots([]);
       if (onCreated) onCreated();
     } catch (err) {
-      setError(err.response?.data?.message || 'No fue posible enviar la solicitud.');
+      setError(getErrorMessage(err, 'No fue posible enviar la solicitud.'));
     } finally {
       setLoading(false);
     }

@@ -68,7 +68,7 @@ td { color: #e9e1eb; }
 .status-pendiente { color: #f3d69a; background: rgba(194,146,57,.14); }
 .status-confirmada { color: #a9e2c0; background: rgba(64,158,103,.14); }
 .status-cancelada { color: #f0aab5; background: rgba(194,72,94,.14); }
-.status-completada { color: #d8b9ec; background: rgba(151,100,190,.16); }
+.status-atendida, .status-completada { color: #d8b9ec; background: rgba(151,100,190,.16); }
 .actions { display: flex; gap: 6px; }
 .btn-small { padding: 7px 9px; border: 1px solid transparent; border-radius: 7px; font-size: 11px; color: white; white-space: nowrap; }
 .btn-small.approve { background: #286b4c; }
@@ -84,3 +84,10 @@ td { color: #e9e1eb; }
   .tabs { margin-top: 22px; }
   .tab { padding: 11px 12px; font-size: 13px; }
 }
+
+/* Registro / cambio entre login y registro */
+.auth-switch { margin: 22px 0 0; text-align: center; font-size: 14px; color: var(--muted); }
+.link-button { padding: 0; border: 0; background: none; color: #e3b2ee; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.link-button:hover { color: #fff; }
+.optional { color: var(--muted); font-weight: 400; }
+.cell-sub { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }

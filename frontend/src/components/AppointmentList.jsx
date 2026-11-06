@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import api from '../services/api';
+import api, { getErrorMessage } from '../services/api';
 
 const statusLabel = {
   PENDIENTE: 'Pendiente de aprobación',
   CONFIRMADA: 'Confirmada',
   CANCELADA: 'Cancelada / rechazada',
-  COMPLETADA: 'Atendida'
+  ATENDIDA: 'Atendida',
+  COMPLETADA: 'Atendida' // compatibilidad con bases antiguas
 };
 
 export default function AppointmentList({ user }) {
@@ -19,7 +20,7 @@ export default function AppointmentList({ user }) {
       setAppointments(response.data.data || []);
       setError('');
     } catch (err) {
-      setError(err.response?.data?.message || 'No se pudieron cargar las citas.');
+      setError(getErrorMessage(err, 'No se pudieron cargar las citas.'));
     }
   }, []);
 
@@ -32,7 +33,7 @@ export default function AppointmentList({ user }) {
       await api.patch(`/appointments/${id}/${action}`);
       await fetchAppointments();
     } catch (err) {
-      setError(err.response?.data?.message || 'No se pudo actualizar la cita.');
+      setError(getErrorMessage(err, 'No se pudo actualizar la cita.'));
     } finally {
       setBusyId(null);
     }
@@ -58,7 +59,7 @@ export default function AppointmentList({ user }) {
             <tbody>
               {appointments.map(item => (
                 <tr key={item.id}>
-                  <td>{item.cliente_email}</td>
+                  <td>{item.cliente_nombre || item.cliente_email}<small className="cell-sub">{item.cliente_email}</small></td>
                   <td>{item.servicio_nombre}</td>
                   <td>{item.profesional_nombre}</td>
                   <td>{String(item.fecha).slice(0, 10)}</td>
