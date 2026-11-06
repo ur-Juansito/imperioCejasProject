@@ -37,7 +37,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-app.get('/api/health', (req, res) => res.json({ success: true, message: 'Éclat Studio API activa' }));
+app.get('/api/health', (req, res) => res.json({ success: true, message: 'Imperio de las Cejas API activa' }));
 
 const authRoutes = require('./src/routes/authRoutes');
 const serviceRoutes = require('./src/routes/serviceRoutes');

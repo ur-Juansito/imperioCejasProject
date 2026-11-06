@@ -34,9 +34,9 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Éclat Studio inicio">
-          <span className="brand-mark">É</span>
-          <span><strong>ÉCLAT</strong><small>STUDIO</small></span>
+        <a className="brand" href="/" aria-label="El Imperio de las Cejas, inicio">
+          <span className="brand-mark">I</span>
+          <span><strong>IMPERIO</strong><small>DE LAS CEJAS</small></span>
         </a>
         <div className="topbar-user">
           <div><strong>{user.nombre || user.email}</strong><small>{title}</small></div>
@@ -57,7 +57,7 @@ export default function App() {
           ? <AppointmentForm onCreated={() => setView('list')} />
           : <AppointmentList user={user} />}
       </main>
-      <footer className="footer">Éclat Studio · Tu belleza, nuestra dedicación.</footer>
+      <footer className="footer">El Imperio de las Cejas · Tu belleza, nuestra dedicación.</footer>
     </div>
   );
 }

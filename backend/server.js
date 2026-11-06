@@ -13,7 +13,7 @@ async function startServer() {
     connection.release();
 
     const server = httpServer.listen(PORT, '0.0.0.0', () => {
-      console.log(`Éclat Studio API escuchando en el puerto ${PORT}`);
+      console.log(`Imperio de las Cejas API escuchando en el puerto ${PORT}`);
     });
 
     const shutdown = async () => {
