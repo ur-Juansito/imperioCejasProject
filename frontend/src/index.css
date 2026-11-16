@@ -180,12 +180,9 @@ td { color: #ddd7c9; }
 .auth-brand > :not(img) { display: none; }
 
 .auth-brand img {
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  /* difuminado rectangular en las orillas, sin cortar el texto */
+  flex: none;
+  width: min(100%, 440px);
+  height: auto;
   -webkit-mask-image:
     linear-gradient(to right, transparent, #000 6%, #000 94%, transparent),
     linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
@@ -195,7 +192,6 @@ td { color: #ddd7c9; }
     linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
           mask-composite: intersect;
 }
-
 .auth-card {
   grid-area: form;
   justify-self: center;
