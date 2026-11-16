@@ -289,7 +289,14 @@ const changeAppointmentStatus = async (req, res, next) => {
         throw fail('No puedes finalizar citas de otro profesional.', 403);
       }
       if (appointment.estado !== 'CONFIRMADA') throw fail('Sólo se pueden marcar como atendidas las citas confirmadas.');
-      nextState = 'ATENDIDA';
+      const [[statusColumn]] = await pool.query(
+        `SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Citas' AND COLUMN_NAME = 'estado'`
+      );
+      const allowedStates = String(statusColumn?.COLUMN_TYPE || '');
+      if (allowedStates.includes("'ATENDIDA'")) nextState = 'ATENDIDA';
+      else if (allowedStates.includes("'COMPLETADA'")) nextState = 'COMPLETADA';
+      else throw fail('El esquema de estados de Citas no contiene ATENDIDA ni COMPLETADA. Revisa la columna estado.', 500);
     } else {
       throw fail('Acción de cita no válida.');
     }

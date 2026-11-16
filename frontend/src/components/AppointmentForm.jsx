@@ -7,7 +7,7 @@ const today = () => {
   return local.toISOString().slice(0, 10);
 };
 
-export default function AppointmentForm({ onCreated }) {
+export default function AppointmentForm({ onCreated, initialServiceId = '' }) {
   const [services, setServices] = useState([]);
   const [professionals, setProfessionals] = useState([]);
   const [serviceId, setServiceId] = useState('');
@@ -18,6 +18,10 @@ export default function AppointmentForm({ onCreated }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialServiceId) setServiceId(String(initialServiceId));
+  }, [initialServiceId]);
 
   useEffect(() => {
     Promise.all([api.get('/services'), api.get('/professionals')])

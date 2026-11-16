@@ -1,0 +1,14 @@
+{
+  "name": "Imperio de las Cejas",
+  "short_name": "Imperio Cejas",
+  "description": "Agenda y reservas de tratamientos de belleza de Imperio de las Cejas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090909",
+  "theme_color": "#090909",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
