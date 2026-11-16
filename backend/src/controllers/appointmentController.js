@@ -104,14 +104,14 @@ const getAvailability = async (req, res, next) => {
     if (fecha < bogotaToday()) throw fail('No puedes consultar horarios de una fecha pasada.');
 
     const [services] = await pool.query(
-      'SELECT duracion_minutos FROM Servicios WHERE id = ?',
+      'SELECT duracion_minutos FROM Servicios WHERE id = ? AND COALESCE(activo,1)=1',
       [servicio_id]
     );
     if (!services.length) throw fail('El servicio seleccionado no existe.', 404);
     const duration = Number(services[0].duracion_minutos || 30);
 
     const [professionals] = await pool.query(
-      'SELECT id FROM Profesionales WHERE id = ?',
+      `SELECT id FROM Profesionales WHERE id = ? AND COALESCE(disponible,1)=1 AND COALESCE(estado_servicio,'DISPONIBLE') <> 'NO_DISPONIBLE'`,
       [profesional_id]
     );
     if (!professionals.length) throw fail('El profesional no está disponible.', 404);
@@ -122,7 +122,7 @@ const getAvailability = async (req, res, next) => {
       `SELECT TIME_FORMAT(hora_inicio, '%H:%i') AS hora_inicio,
               TIME_FORMAT(hora_fin, '%H:%i') AS hora_fin
        FROM Horarios
-       WHERE profesional_id = ? AND (dia_semana = ? OR dia_semana = ?)
+       WHERE profesional_id = ? AND (dia_semana = ? OR dia_semana = ?) AND COALESCE(activo,1)=1
        ORDER BY hora_inicio`,
       [profesional_id, weekdayName(date), weekdayNumber(date)]
     );
@@ -184,7 +184,7 @@ const createAppointment = async (req, res, next) => {
 
     // Serializa las reservas para un mismo profesional y evita dos solicitudes simultáneas.
     const [professionalRows] = await connection.query(
-      'SELECT id FROM Profesionales WHERE id = ? FOR UPDATE',
+      `SELECT id FROM Profesionales WHERE id = ? AND COALESCE(disponible,1)=1 AND COALESCE(estado_servicio,'DISPONIBLE') <> 'NO_DISPONIBLE' FOR UPDATE`,
       [profesional_id]
     );
     if (!professionalRows.length) throw fail('El profesional no existe o está inactivo.', 404);
@@ -199,7 +199,7 @@ const createAppointment = async (req, res, next) => {
     const [schedules] = await connection.query(
       `SELECT id FROM Horarios
        WHERE profesional_id = ? AND (dia_semana = ? OR dia_semana = ?)
-         AND hora_inicio <= ? AND hora_fin >= ADDTIME(?, SEC_TO_TIME(? * 60))
+         AND COALESCE(activo,1)=1 AND hora_inicio <= ? AND hora_fin >= ADDTIME(?, SEC_TO_TIME(? * 60))
        LIMIT 1`,
       [profesional_id, weekdayName(date), weekdayNumber(date), hora, hora, duration]
     );

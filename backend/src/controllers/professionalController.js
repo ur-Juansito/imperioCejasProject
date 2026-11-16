@@ -1,13 +1,13 @@
-const pool = require('../config/db');
-
-// Lista pública de profesionales (no se expone usuario_id).
-const getAllProfessionals = async (req, res, next) => {
-    try {
-        const [professionals] = await pool.query(
-            'SELECT id, nombre_completo, especialidad FROM Profesionales ORDER BY nombre_completo'
-        );
-        res.status(200).json({ success: true, data: professionals });
-    } catch (error) { next(error); }
-};
-
-module.exports = { getAllProfessionals };
+const pool=require('../config/db');
+const DAYS=['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'];
+const fail=(message,statusCode=400)=>Object.assign(new Error(message),{statusCode});
+const getAllProfessionals=async(req,res,next)=>{try{const [rows]=await pool.query(`SELECT id,nombre_completo,especialidad FROM Profesionales WHERE COALESCE(disponible,1)=1 AND COALESCE(estado_servicio,'DISPONIBLE') <> 'NO_DISPONIBLE' ORDER BY nombre_completo`);res.json({success:true,data:rows});}catch(e){next(e);}};
+const getMyProfile=async(req,res,next)=>{try{const [rows]=await pool.query(`SELECT id,nombre_completo,especialidad,COALESCE(disponible,1) AS disponible,COALESCE(estado_servicio,'DISPONIBLE') AS estado_servicio FROM Profesionales WHERE usuario_id=? LIMIT 1`,[req.user.id]);if(!rows.length)throw fail('No existe un perfil profesional vinculado a tu usuario.',404);res.json({success:true,data:rows[0]});}catch(e){next(e);}};
+const getSchedule=async(professionalId)=>{const [rows]=await pool.query(`SELECT dia_semana,TIME_FORMAT(hora_inicio,'%H:%i') AS hora_inicio,TIME_FORMAT(hora_fin,'%H:%i') AS hora_fin,COALESCE(activo,1) AS activo FROM Horarios WHERE profesional_id=? ORDER BY FIELD(dia_semana,'LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO')`,[professionalId]);return rows;};
+const getMySchedule=async(req,res,next)=>{try{const [p]=await pool.query('SELECT id FROM Profesionales WHERE usuario_id=?',[req.user.id]);if(!p.length)throw fail('Perfil profesional no encontrado.',404);res.json({success:true,data:await getSchedule(p[0].id)});}catch(e){next(e);}};
+const getScheduleById=async(req,res,next)=>{try{const id=Number(req.params.id);const [p]=await pool.query('SELECT id FROM Profesionales WHERE id=?',[id]);if(!p.length)throw fail('Profesional no encontrado.',404);res.json({success:true,data:await getSchedule(id)});}catch(e){next(e);}};
+const saveSchedule=async(professionalId,horarios)=>{if(!Array.isArray(horarios))throw fail('El horario debe ser una lista.');const connection=await pool.getConnection();try{await connection.beginTransaction();for(const h of horarios){if(!DAYS.includes(h.dia_semana))throw fail('Día de la semana inválido.');const start=String(h.hora_inicio||''),end=String(h.hora_fin||'');if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)||start>=end)throw fail(`Horario inválido para ${h.dia_semana}.`);const [existing]=await connection.query('SELECT id FROM Horarios WHERE profesional_id=? AND dia_semana=? LIMIT 1',[professionalId,h.dia_semana]);if(existing.length)await connection.query('UPDATE Horarios SET hora_inicio=?,hora_fin=?,activo=? WHERE id=?',[start,end,h.activo?1:0,existing[0].id]);else await connection.query('INSERT INTO Horarios (profesional_id,dia_semana,hora_inicio,hora_fin,activo) VALUES (?,?,?,?,?)',[professionalId,h.dia_semana,start,end,h.activo?1:0]);}await connection.commit();}catch(e){await connection.rollback();throw e;}finally{connection.release();}};
+const saveMySchedule=async(req,res,next)=>{try{const [p]=await pool.query('SELECT id FROM Profesionales WHERE usuario_id=?',[req.user.id]);if(!p.length)throw fail('Perfil profesional no encontrado.',404);await saveSchedule(p[0].id,req.body.horarios);res.json({success:true,message:'Horario actualizado.'});}catch(e){next(e);}};
+const saveScheduleById=async(req,res,next)=>{try{const id=Number(req.params.id);const [p]=await pool.query('SELECT id FROM Profesionales WHERE id=?',[id]);if(!p.length)throw fail('Profesional no encontrado.',404);await saveSchedule(id,req.body.horarios);res.json({success:true,message:'Horario actualizado.'});}catch(e){next(e);}};
+const updateMyAvailability=async(req,res,next)=>{try{const disponible=req.body.disponible?1:0;const estado=['DISPONIBLE','ATENDIENDO','NO_DISPONIBLE'].includes(req.body.estado_servicio)?req.body.estado_servicio:(disponible?'DISPONIBLE':'NO_DISPONIBLE');const [r]=await pool.query('UPDATE Profesionales SET disponible=?,estado_servicio=? WHERE usuario_id=?',[disponible,estado,req.user.id]);if(!r.affectedRows)throw fail('Perfil profesional no encontrado.',404);res.json({success:true,message:'Disponibilidad actualizada.'});}catch(e){next(e);}};
+module.exports={getAllProfessionals,getMyProfile,getMySchedule,getScheduleById,saveMySchedule,saveScheduleById,updateMyAvailability};

@@ -10,11 +10,14 @@ export default function AdminPanel({ currentUser }) {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [busyUser, setBusyUser] = useState(null);
+  const [professionals, setProfessionals] = useState([]);
 
   const loadUsers = useCallback(async () => {
     try {
       const response = await api.get('/admin/users');
       setUsers(response.data.data || []);
+      const staff = await api.get('/admin/professionals');
+      setProfessionals(staff.data.data || []);
       setError('');
     } catch (err) {
       setError(getErrorMessage(err, 'No se pudo cargar la lista de usuarios.'));
@@ -116,6 +119,13 @@ export default function AdminPanel({ currentUser }) {
             </tbody>
           </table>
         </div>
+      </div>
+      <div className="panel admin-users">
+        <div className="section-heading"><p className="eyebrow">ESTADO DEL EQUIPO</p><h2>Profesionales en servicio</h2><p className="muted">Consulta y actualiza quién está disponible o atendiendo.</p></div>
+        <div className="table-wrap"><table><thead><tr><th>Profesional</th><th>Correo</th><th>Estado</th><th>Disponibilidad</th></tr></thead><tbody>
+          {professionals.map(person=><tr key={person.id}><td>{person.nombre_completo}</td><td>{person.email||'—'}</td><td><span className={`status ${person.estado_servicio==='ATENDIENDO'?'status-confirmada':person.estado_servicio==='NO_DISPONIBLE'?'status-cancelada':'status-pendiente'}`}>{person.estado_servicio}</span></td><td><button className={`btn-small ${person.disponible?'approve':'reject'}`} onClick={async()=>{try{await api.patch(`/admin/professionals/${person.id}/availability`,{disponible:!person.disponible,estado_servicio:!person.disponible?'DISPONIBLE':'NO_DISPONIBLE'});await loadUsers();}catch(err){setError(getErrorMessage(err));}}}>{person.disponible?'Desactivar':'Activar'}</button></td></tr>)}
+          {!professionals.length&&<tr><td colSpan="4" className="empty-cell">No hay profesionales registrados.</td></tr>}
+        </tbody></table></div>
       </div>
     </section>
   );

@@ -1,5 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const professionalController = require('../controllers/professionalController');
-router.get('/', professionalController.getAllProfessionals);
-module.exports = router;
+const express=require('express');
+const router=express.Router();
+const c=require('../controllers/professionalController');
+const {verifyToken}=require('../middlewares/authMiddleware');
+const {checkRole}=require('../middlewares/roleMiddleware');
+router.get('/',c.getAllProfessionals);
+router.get('/me',verifyToken,checkRole('PROFESIONAL'),c.getMyProfile);
+router.get('/me/schedule',verifyToken,checkRole('PROFESIONAL'),c.getMySchedule);
+router.put('/me/schedule',verifyToken,checkRole('PROFESIONAL'),c.saveMySchedule);
+router.patch('/me/availability',verifyToken,checkRole('PROFESIONAL'),c.updateMyAvailability);
+router.get('/:id/schedule',verifyToken,checkRole('ADMIN'),c.getScheduleById);
+router.put('/:id/schedule',verifyToken,checkRole('ADMIN'),c.saveScheduleById);
+module.exports=router;

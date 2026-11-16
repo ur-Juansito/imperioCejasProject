@@ -44,12 +44,14 @@ const serviceRoutes = require('./src/routes/serviceRoutes');
 const appointmentRoutes = require('./src/routes/appointmentRoutes');
 const professionalRoutes = require('./src/routes/professionalRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
+const galleryRoutes = require('./src/routes/galleryRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/professionals', professionalRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/gallery', galleryRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

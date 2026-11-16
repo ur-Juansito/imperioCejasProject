@@ -1,12 +1,12 @@
-const express = require('express');
-const router = express.Router();
-const controller = require('../controllers/adminController');
-const { verifyToken } = require('../middlewares/authMiddleware');
-const { checkRole } = require('../middlewares/roleMiddleware');
-
-router.use(verifyToken, checkRole('ADMIN'));
-router.get('/users', controller.listUsers);
-router.post('/professionals', controller.createProfessional);
-router.delete('/users/:id', controller.deleteUser);
-
-module.exports = router;
+const express=require('express');
+const router=express.Router();
+const controller=require('../controllers/adminController');
+const {verifyToken}=require('../middlewares/authMiddleware');
+const {checkRole}=require('../middlewares/roleMiddleware');
+router.use(verifyToken,checkRole('ADMIN'));
+router.get('/users',controller.listUsers);
+router.post('/professionals',controller.createProfessional);
+router.get('/professionals',controller.listProfessionalsStatus);
+router.patch('/professionals/:id/availability',controller.updateProfessionalAvailability);
+router.delete('/users/:id',controller.deleteUser);
+module.exports=router;

@@ -122,4 +122,29 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-module.exports = { listUsers, createProfessional, deleteUser };
+
+const listProfessionalsStatus = async (req,res,next) => {
+  try {
+    const [rows] = await pool.query(`SELECT p.id,p.nombre_completo,p.especialidad,
+      COALESCE(p.disponible,1) AS disponible,
+      COALESCE(p.estado_servicio,'DISPONIBLE') AS estado_servicio,
+      u.email
+      FROM Profesionales p LEFT JOIN Usuarios u ON u.id=p.usuario_id
+      ORDER BY p.nombre_completo`);
+    res.json({success:true,data:rows});
+  } catch(error){next(error);}
+};
+const updateProfessionalAvailability = async(req,res,next) => {
+  try {
+    const id=Number(req.params.id);
+    if(!Number.isInteger(id)||id<1) throw fail('Profesional inválido.');
+    const disponible=req.body.disponible?1:0;
+    const estado=['DISPONIBLE','ATENDIENDO','NO_DISPONIBLE'].includes(req.body.estado_servicio)
+      ? req.body.estado_servicio : (disponible?'DISPONIBLE':'NO_DISPONIBLE');
+    const [result]=await pool.query('UPDATE Profesionales SET disponible=?,estado_servicio=? WHERE id=?',[disponible,estado,id]);
+    if(!result.affectedRows) throw fail('Profesional no encontrado.',404);
+    res.json({success:true,message:'Estado del profesional actualizado.'});
+  } catch(error){next(error);}
+};
+module.exports = { listUsers, createProfessional, deleteUser, listProfessionalsStatus, updateProfessionalAvailability };
+
