@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import api, { getErrorMessage } from '../services/api';
+import PasswordInput from './PasswordInput';
 
 const emptyForm = { nombre_completo: '', email: '', password: '', especialidad: '' };
 
@@ -82,7 +83,7 @@ export default function AdminPanel({ currentUser }) {
             <input name="email" type="email" value={form.email} onChange={updateField} maxLength={100} required />
           </label>
           <label>Contraseña inicial
-            <input name="password" type="password" value={form.password} onChange={updateField} minLength={8} maxLength={72} required />
+            <PasswordInput name="password" value={form.password} onChange={updateField} minLength={8} maxLength={72} required />
           </label>
           <label>Especialidad
             <input name="especialidad" value={form.especialidad} onChange={updateField} maxLength={100} placeholder="Ej. Micropigmentación de cejas" />

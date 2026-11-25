@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
+import PasswordRecovery from './components/PasswordRecovery';
 import AppointmentForm from './components/AppointmentForm';
 import AppointmentList from './components/AppointmentList';
 import PublicHome from './components/PublicHome';
@@ -39,11 +40,13 @@ export default function App() {
     <>
       <PublicHome onBook={requestBooking} onLogin={() => { setBookingIntent(false); setAuthView('login'); }} onRegister={() => { setBookingIntent(false); setAuthView('register'); }} />
       {authView && <div className="auth-overlay" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setAuthView(null); }}>
-        <div className="auth-modal" role="dialog" aria-modal="true" aria-label={authView === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}>
+        <div className="auth-modal" role="dialog" aria-modal="true" aria-label={authView === 'login' ? 'Iniciar sesión' : authView === 'forgot' ? 'Recuperar contraseña' : 'Crear cuenta'}>
           <button className="modal-close" onClick={() => setAuthView(null)} aria-label="Cerrar">×</button>
           <div className="modal-brand"><img src="/logo-imperio-cejas.png" alt="Imperio de las Cejas" /></div>
           {authView === 'login'
-            ? <Login onLoginSuccess={onAuthenticated} onGoRegister={() => setAuthView('register')} />
+            ? <Login onLoginSuccess={onAuthenticated} onGoRegister={() => setAuthView('register')} onGoForgot={() => setAuthView('forgot')} />
+            : authView === 'forgot'
+            ? <PasswordRecovery onGoLogin={() => setAuthView('login')} />
             : <Register onRegisterSuccess={onAuthenticated} onGoLogin={() => setAuthView('login')} />}
         </div>
       </div>}

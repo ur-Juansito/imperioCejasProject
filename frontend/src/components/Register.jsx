@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api, { getErrorMessage } from '../services/api';
+import PasswordInput from './PasswordInput';
 
 const MIN_PASSWORD = 8;
 
@@ -55,10 +56,24 @@ export default function Register({ onRegisterSuccess, onGoLogin }) {
           <input type="email" autoComplete="email" placeholder="correo@ejemplo.com" value={form.email} onChange={update('email')} maxLength={100} required />
         </label>
         <label>Contraseña
-          <input type="password" autoComplete="new-password" placeholder={`Mínimo ${MIN_PASSWORD} caracteres`} value={form.password} onChange={update('password')} minLength={MIN_PASSWORD} maxLength={72} required />
+          <PasswordInput
+            autoComplete="new-password"
+            placeholder={`Mínimo ${MIN_PASSWORD} caracteres`}
+            value={form.password}
+            onChange={update('password')}
+            minLength={MIN_PASSWORD}
+            maxLength={72}
+            required
+          />
         </label>
         <label>Confirmar contraseña
-          <input type="password" autoComplete="new-password" placeholder="Repite la contraseña" value={form.confirm} onChange={update('confirm')} required />
+          <PasswordInput
+            autoComplete="new-password"
+            placeholder="Repite la contraseña"
+            value={form.confirm}
+            onChange={update('confirm')}
+            required
+          />
         </label>
         <button className="btn-primary" type="submit" disabled={loading}>{loading ? 'Creando cuenta…' : 'Crear cuenta'}</button>
       </form>

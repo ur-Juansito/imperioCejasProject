@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import api, { getErrorMessage } from '../services/api';
+import PasswordInput from './PasswordInput';
 
-export default function Login({ onLoginSuccess, onGoRegister }) {
+export default function Login({ onLoginSuccess, onGoRegister, onGoForgot }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -30,15 +31,46 @@ export default function Login({ onLoginSuccess, onGoRegister }) {
       <p className="muted">Inicia sesión para gestionar tus citas.</p>
       {error && <p className="alert error" role="alert">{error}</p>}
       <form onSubmit={handleSubmit} className="form-stack">
-        <label>Correo electrónico
-          <input type="email" autoComplete="email" placeholder="correo@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required />
+        <label>
+          Correo electrónico
+          <input
+            type="email"
+            autoComplete="email"
+            placeholder="correo@ejemplo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         </label>
-        <label>Contraseña
-          <input type="password" autoComplete="current-password" placeholder="Tu contraseña" value={password} onChange={e => setPassword(e.target.value)} required />
+        <label>
+          <div className="label-with-link">
+            <span>Contraseña</span>
+            <button
+              type="button"
+              className="link-button sub-link"
+              onClick={onGoForgot}
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
+          <PasswordInput
+            autoComplete="current-password"
+            placeholder="Tu contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
         </label>
-        <button className="btn-primary" type="submit" disabled={loading}>{loading ? 'Ingresando…' : 'Iniciar sesión'}</button>
+        <button className="btn-primary" type="submit" disabled={loading}>
+          {loading ? 'Ingresando…' : 'Iniciar sesión'}
+        </button>
       </form>
-      <p className="auth-switch">¿Aún no tienes cuenta? <button type="button" className="link-button" onClick={onGoRegister}>Crear cuenta</button></p>
+      <p className="auth-switch">
+        ¿Aún no tienes cuenta?{' '}
+        <button type="button" className="link-button" onClick={onGoRegister}>
+          Crear cuenta
+        </button>
+      </p>
     </section>
   );
 }
